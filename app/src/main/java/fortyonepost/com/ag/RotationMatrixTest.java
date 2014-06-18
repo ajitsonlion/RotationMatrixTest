@@ -8,6 +8,9 @@ import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.media.AudioManager;
+
+import fortyonepost.com.ag.Helper.*;
 
 public class RotationMatrixTest extends Activity implements SensorEventListener {
     private SensorManager mSensorManager;
@@ -17,7 +20,11 @@ public class RotationMatrixTest extends Activity implements SensorEventListener 
     private TextView azimuth;
     private float norm_Of_g;
     private ProgressBar waterLevelInGlassProgressBar;
-    private final int DEFAULT_WATER_LEVEL=50;
+    private final int DEFAULT_WATER_LEVEL = 20;
+
+    public static final int TAP = 13;
+    public static final int DISALLOWED = 10;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,9 +41,6 @@ public class RotationMatrixTest extends Activity implements SensorEventListener 
         waterLevelInGlassProgressBar=(ProgressBar)findViewById(R.id.vertical_progressbar);
         waterLevelInGlassProgressBar.setMax(100);
         waterLevelInGlassProgressBar.setProgress(DEFAULT_WATER_LEVEL);
-
-
-
 
 
     }
@@ -70,35 +74,45 @@ public class RotationMatrixTest extends Activity implements SensorEventListener 
             geomag[2]=(geomag[2]*1+evt.values[2])*0.5f;
         } else if (type == Sensor.TYPE_ACCELEROMETER) {
 
-            float[]  g = evt.values.clone();
-            norm_Of_g = (float)(Math.sqrt(g[0] * g[0] + g[1] * g[1] + g[2] * g[2]));
+            float[] g = new float[3];
+
+            g = evt.values.clone();
+            g = filter.filterAccelerometerData(g[2], g[1], g[0]);
+            //  norm_Of_g = (float)(Math.sqrt(g[0] * g[0] + g[1] * g[1] + g[2] * g[2]));
 
 
-            g[0] = g[0] / norm_Of_g;
-            g[1] = g[1] / norm_Of_g;
-            g[2] = g[2] / norm_Of_g;
+            //  g[0] = g[0] / norm_Of_g;
+            //  g[1] = g[1] / norm_Of_g;
+            //  g[2] = g[2] / norm_Of_g;
 
             gravity[0]=(gravity[0]*2+evt.values[0])*0.33334f;
             //values[0]: Azimuth, rotation around the Z axis (0<=azimuth<360).
             // 0 = North, 90 = East, 180 = South, 270 = West
             int inclinationZ = (int) Math.round(Math.toDegrees(Math.acos(gravity[0])));
+            int finalWaterLevel = inclinationZ - DEFAULT_WATER_LEVEL;
+
+            if (inclinationZ % 10 == 0) {
+
+                waterLevelInGlassProgressBar.setProgress(finalWaterLevel);
+
+                azimuth.setText("" + waterLevelInGlassProgressBar.getProgress());
+
+                AudioManager audio = (AudioManager) getSystemService(AUDIO_SERVICE);
+                    
+                audio.playSoundEffect(TAP);
 
 
-            int finalWaterLevel=inclinationZ-DEFAULT_WATER_LEVEL;
-            waterLevelInGlassProgressBar.setProgress(finalWaterLevel);
-
-            azimuth.setText(""+waterLevelInGlassProgressBar.getProgress());
+            }
 
 
-
-            gravity[1]=(gravity[1]*2+evt.values[1])*0.33334f;
+            //  gravity[1]=(gravity[1]*2+evt.values[1])*0.33334f;
             //values[1]: Pitch, rotation around X axis
             // (-180<=pitch<=180), with positive values when the z-axis moves toward the y-axis.
             //  int inclinationX = (int) Math.round(Math.toDegrees(Math.acos(gravity[1])));
             // pitch.setText(""+inclinationX);
 
 
-            gravity[2]=(gravity[2]*2+evt.values[2])*0.33334f;
+            // gravity[2]=(gravity[2]*2+evt.values[2])*0.33334f;
             //values[2]: Roll, rotation around Y axis (-90<=roll<=90),
             // with positive values when the z-axis moves toward the x-axis.
             //  int inclinationY = (int) Math.round(Math.toDegrees(Math.acos(gravity[2])));
@@ -121,3 +135,5 @@ public class RotationMatrixTest extends Activity implements SensorEventListener 
 
 
 }
+
+

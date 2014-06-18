@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+     <string name="app_name">RotationMatrixTest</string>
+
+    <string name ="Azimuth">Azimuth:</string>
+    <string name ="Pitch">Pitch:</string>
+    <string name ="Roll">Roll:</string>
+</resources>

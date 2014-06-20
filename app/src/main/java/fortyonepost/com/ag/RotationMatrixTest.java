@@ -5,26 +5,31 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.media.AudioManager;
 import android.os.Bundle;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.media.AudioManager;
 
-import fortyonepost.com.ag.Helper.*;
+import fortyonepost.com.ag.Helper.NotificationSounds;
 
 public class RotationMatrixTest extends Activity implements SensorEventListener {
     private SensorManager mSensorManager;
-    private float[] gravity = new float[3];
-    private float[] geomag = new float[3];
+    private float[] mValuesAccelerometer = new float[3];
+    private float[] mValuesMagnet = new float[3];
     private float[] rotationMatrix;
     private TextView azimuth;
     private float norm_Of_g;
     private ProgressBar waterLevelInGlassProgressBar;
-    private final int DEFAULT_WATER_LEVEL = 20;
-
+    private final int DEFAULT_WATER_LEVEL = 0;
+    final float[] mValuesOrientation = new float[3];
+    private final int DEFAULT_HEAD_POSITION_ANGLE = 90;
+    private final int CALIBRATION_ANGLE = 50;
+    private final int HEAD_POSITION_DOWN = DEFAULT_HEAD_POSITION_ANGLE - CALIBRATION_ANGLE;
+    private final int HEAD_POSITION_UP = DEFAULT_HEAD_POSITION_ANGLE + CALIBRATION_ANGLE;
+    private final int PROGRESS_BAR_SCALE_FACTOR = (50 / (CALIBRATION_ANGLE));
     public static final int TAP = 13;
     public static final int DISALLOWED = 10;
-
+    private String TAG = "fortyonepost.com.ag.RotationMatrixTest";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,7 +62,6 @@ public class RotationMatrixTest extends Activity implements SensorEventListener 
                 mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD),
                 SensorManager.SENSOR_DELAY_GAME );
     }
-
     @Override
     protected void onPause() {
         super.onPause();
@@ -69,65 +73,56 @@ public class RotationMatrixTest extends Activity implements SensorEventListener 
 
         //Smoothing the sensor data a bit
         if (type == Sensor.TYPE_MAGNETIC_FIELD) {
-            geomag[0]=(geomag[0]*1+evt.values[0])*0.5f;
-            geomag[1]=(geomag[1]*1+evt.values[1])*0.5f;
-            geomag[2]=(geomag[2]*1+evt.values[2])*0.5f;
+            mValuesMagnet[0] = (mValuesMagnet[0] * 1 + evt.values[0]) * 0.5f;
+            mValuesMagnet[1] = (mValuesMagnet[1] * 1 + evt.values[1]) * 0.5f;
+            mValuesMagnet[2] = (mValuesMagnet[2] * 1 + evt.values[2]) * 0.5f;
         } else if (type == Sensor.TYPE_ACCELEROMETER) {
 
-            float[] g = new float[3];
 
-            g = evt.values.clone();
-            g = filter.filterAccelerometerData(g[2], g[1], g[0]);
-            //  norm_Of_g = (float)(Math.sqrt(g[0] * g[0] + g[1] * g[1] + g[2] * g[2]));
-
-
-            //  g[0] = g[0] / norm_Of_g;
-            //  g[1] = g[1] / norm_Of_g;
-            //  g[2] = g[2] / norm_Of_g;
-
-            gravity[0]=(gravity[0]*2+evt.values[0])*0.33334f;
+            mValuesAccelerometer[0] = (mValuesAccelerometer[0] * 2 + evt.values[0]) * 0.33334f;
             //values[0]: Azimuth, rotation around the Z axis (0<=azimuth<360).
             // 0 = North, 90 = East, 180 = South, 270 = West
-            int inclinationZ = (int) Math.round(Math.toDegrees(Math.acos(gravity[0])));
-            int finalWaterLevel = inclinationZ - DEFAULT_WATER_LEVEL;
-
-            if (inclinationZ % 10 == 0) {
-
-                waterLevelInGlassProgressBar.setProgress(finalWaterLevel);
-
-                azimuth.setText("" + waterLevelInGlassProgressBar.getProgress());
-
-                AudioManager audio = (AudioManager) getSystemService(AUDIO_SERVICE);
-                    
-                audio.playSoundEffect(TAP);
 
 
-            }
-
-
-            //  gravity[1]=(gravity[1]*2+evt.values[1])*0.33334f;
+            mValuesAccelerometer[1] = (mValuesAccelerometer[1] * 2 + evt.values[1]) * 0.33334f;
             //values[1]: Pitch, rotation around X axis
             // (-180<=pitch<=180), with positive values when the z-axis moves toward the y-axis.
-            //  int inclinationX = (int) Math.round(Math.toDegrees(Math.acos(gravity[1])));
-            // pitch.setText(""+inclinationX);
 
 
-            // gravity[2]=(gravity[2]*2+evt.values[2])*0.33334f;
+            mValuesAccelerometer[2] = (mValuesAccelerometer[2] * 2 + evt.values[2]) * 0.33334f;
             //values[2]: Roll, rotation around Y axis (-90<=roll<=90),
             // with positive values when the z-axis moves toward the x-axis.
-            //  int inclinationY = (int) Math.round(Math.toDegrees(Math.acos(gravity[2])));
-            // roll.setText("" + inclinationY);
+            ;
         }
 
         if ((type==Sensor.TYPE_MAGNETIC_FIELD) || (type==Sensor.TYPE_ACCELEROMETER)) {
             rotationMatrix = new float[16];
-            SensorManager.getRotationMatrix(rotationMatrix, null, gravity, geomag);
+            SensorManager.getRotationMatrix(rotationMatrix, null, mValuesAccelerometer, mValuesMagnet);
             SensorManager.remapCoordinateSystem(
                     rotationMatrix,
                     SensorManager.AXIS_Y,
                     SensorManager.AXIS_MINUS_X,
                     rotationMatrix );
         }
+        SensorManager.getOrientation(rotationMatrix, mValuesOrientation);
+
+        int tiltZ = (int) Math.floor(Math.toDegrees(mValuesOrientation[0]));//azimuth
+        int tiltX = (int) Math.floor(Math.toDegrees(mValuesOrientation[1])); //pitch
+        int tiltY = (int) Math.floor(Math.toDegrees(mValuesOrientation[2])); //roll
+        //  String test = "results New: " +tiltX +" "+tiltY+ " "+ tiltZ;
+        //   Log.d(TAG, test);
+
+        int inclination = ((tiltY - (HEAD_POSITION_DOWN))) * PROGRESS_BAR_SCALE_FACTOR;
+
+
+        if (inclination % 5 == 0) {
+
+            waterLevelInGlassProgressBar.setProgress(inclination);
+            azimuth.setText("" + waterLevelInGlassProgressBar.getProgress());
+
+        }
+
+
     }
 
     public void onAccuracyChanged(Sensor sensor, int accuracy) {

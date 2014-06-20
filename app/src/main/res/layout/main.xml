@@ -3,6 +3,8 @@
     android:orientation="horizontal"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
+    android:keepScreenOn="true"
+    android:background="@android:color/black"
      >
 
 
@@ -19,9 +21,9 @@
             android:id="@+id/azimuth"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:textSize="70dip"
+            android:textSize="60dip"
             android:layout_gravity="center"
-            android:layout_marginLeft="40dip"
+            android:layout_marginLeft="20dip"
             android:text="000" />
 
 

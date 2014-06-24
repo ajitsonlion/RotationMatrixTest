@@ -7,18 +7,22 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.media.AudioManager;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-
+import com.google.android.glass.eye.EyeGesture;
+import com.google.android.glass.eye.EyeGestureManager;
+import com.google.android.glass.eye.EyeGestureManager.Listener;
 import fortyonepost.com.ag.Helper.NotificationSounds;
 
 public class RotationMatrixTest extends Activity implements SensorEventListener {
     private SensorManager mSensorManager;
+    private AudioManager mAudioManager;
+
     private float[] mValuesAccelerometer = new float[3];
     private float[] mValuesMagnet = new float[3];
     private float[] rotationMatrix;
     private TextView azimuth;
-    private float norm_Of_g;
     private ProgressBar waterLevelInGlassProgressBar;
     private final int DEFAULT_WATER_LEVEL = 0;
     final float[] mValuesOrientation = new float[3];
@@ -30,15 +34,30 @@ public class RotationMatrixTest extends Activity implements SensorEventListener 
     public static final int TAP = 13;
     public static final int DISALLOWED = 10;
     private String TAG = "fortyonepost.com.ag.RotationMatrixTest";
+     private boolean EYE_BLINKED=false;
+    private EyeGestureManager mEyeGestureManager;
+    private EyeGestureListener mEyeGestureListener;
+
+    // private EyeGesture target1 = EyeGesture.DON;
+    // private EyeGesture target2 = EyeGesture.DOFF;
+    private EyeGesture target1 = EyeGesture.WINK;
+    private EyeGesture target2 = EyeGesture.DOUBLE_BLINK;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
-        // Get an instance of the SensorManager
+         // Get an instance of the SensorManager
         mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+        mAudioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
+        mEyeGestureManager = EyeGestureManager.from(this);
+        mEyeGestureListener = new EyeGestureListener();
 
-
+        // print out each eye gesture is supported or not
+        for (EyeGesture eg : EyeGesture.values()) {
+            boolean supported = mEyeGestureManager.isSupported(eg);
+            Log.d(TAG, eg.name() + ":" + supported);
+        }
 
         azimuth=(TextView)findViewById(R.id.azimuth);
         //  roll=(TextView)findViewById(R.id.roll);
@@ -115,19 +134,75 @@ public class RotationMatrixTest extends Activity implements SensorEventListener 
         int inclination = ((tiltY - (HEAD_POSITION_DOWN))) * PROGRESS_BAR_SCALE_FACTOR;
 
 
-        if (inclination % 5 == 0) {
+        if(!EYE_BLINKED){
 
-            waterLevelInGlassProgressBar.setProgress(inclination);
-            azimuth.setText("" + waterLevelInGlassProgressBar.getProgress());
+            if (inclination % 5 == 0) {
+
+                waterLevelInGlassProgressBar.setProgress(inclination);
+                azimuth.setText("" + waterLevelInGlassProgressBar.getProgress());
+
+            }
+        }
+        else{
+
 
         }
 
 
+
+    }
+
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+        mEyeGestureManager.stopDetector(target1);
+        mEyeGestureManager.stopDetector(target2);
+
+        mEyeGestureManager.enableDetectorPersistently(target1, true);
+        mEyeGestureManager.enableDetectorPersistently(target2, true);
+
+        mEyeGestureManager.register(target1, mEyeGestureListener);
+        mEyeGestureManager.register(target2, mEyeGestureListener);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+
+        mEyeGestureManager.unregister(target1, mEyeGestureListener);
+        mEyeGestureManager.unregister(target2, mEyeGestureListener);
+
+        mEyeGestureManager.stopDetector(target1);
+        mEyeGestureManager.stopDetector(target2);
     }
 
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
     }
 
+
+
+    private class EyeGestureListener implements Listener {
+
+        @Override
+        public void onEnableStateChange(EyeGesture eyeGesture, boolean paramBoolean) {
+            Log.i(TAG, eyeGesture + " state changed:" + paramBoolean);
+        }
+
+        @Override
+        public void onDetected(final EyeGesture eyeGesture) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+
+                    mAudioManager.playSoundEffect(NotificationSounds.SUCCESS);
+                    Log.i(TAG, eyeGesture + " is detected");
+
+                }
+            });
+        }
+    }
 
 }
 

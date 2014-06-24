@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/AccessGyroscope.iml" filepath="$PROJECT_DIR$/AccessGyroscope.iml" />
+      <module fileurl="file://$PROJECT_DIR$/RotationMatrixTest.iml" filepath="$PROJECT_DIR$/RotationMatrixTest.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
     </modules>
   </component>

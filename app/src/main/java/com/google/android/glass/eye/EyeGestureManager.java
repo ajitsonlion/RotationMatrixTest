@@ -1,4 +1,4 @@
-package fortyonepost.com.ag.eye;
+package com.google.android.glass.eye;
 
 import android.content.Context;
 
